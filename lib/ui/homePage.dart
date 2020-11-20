@@ -43,7 +43,7 @@ class AppState extends State<Musify> {
       setState(() {
         playerState = PlayerState.playing;
         status = 'play';
-        audioPlayer.play(kUrl);
+        audioPlayer.play(current.url);
       });
     });
 
@@ -72,14 +72,8 @@ class AppState extends State<Musify> {
     setState(() {});
   }
 
-  getSongDetails(String id, var context) async {
-    try {
-      await fetchSongDetails(id);
-      print(kUrl);
-    } catch (e) {
-      artist = "Unknown";
-      print(e);
-    }
+  getSongDetails(Song song, var context) async {
+    current = song;
     setState(() {
       checker = "Haa";
     });
@@ -91,7 +85,7 @@ class AppState extends State<Musify> {
     );
   }
 
-  downloadSong(id) async {
+  downloadSong() async {
     String filepath;
     String filepath2;
     var status = await Permission.storage.status;
@@ -104,7 +98,6 @@ class AppState extends State<Musify> {
       debugPrint(statuses[Permission.storage].toString());
     }
     status = await Permission.storage.status;
-    await fetchSongDetails(id);
     if (status.isGranted) {
       ProgressDialog pr = ProgressDialog(context);
       pr = ProgressDialog(
@@ -119,7 +112,7 @@ class AppState extends State<Musify> {
         elevation: 4,
         textAlign: TextAlign.left,
         progressTextStyle: TextStyle(color: Colors.white),
-        message: "Downloading " + title,
+        message: "Downloading " + current.title,
         messageTextStyle: TextStyle(color: accent),
         progressWidget: Padding(
           padding: const EdgeInsets.all(20.0),
@@ -130,35 +123,25 @@ class AppState extends State<Musify> {
       );
       await pr.show();
 
-      final filename = title + ".m4a";
-      final artname = title + "_artwork.jpg";
+      final filename = current.title + ".mp3";
+      final artname = current.title + "_artwork.jpg";
       //Directory appDocDir = await getExternalStorageDirectory();
-      String dlPath = await ExtStorage.getExternalStoragePublicDirectory(ExtStorage.DIRECTORY_MUSIC);
-      await File(dlPath + "/" + filename).create(recursive: true).then((value) => filepath = value.path);
-      await File(dlPath + "/" + artname).create(recursive: true).then((value) => filepath2 = value.path);
+      String dlPath = await ExtStorage.getExternalStoragePublicDirectory(
+          ExtStorage.DIRECTORY_MUSIC);
+      await File(dlPath + "/" + filename)
+          .create(recursive: true)
+          .then((value) => filepath = value.path);
+      await File(dlPath + "/" + artname)
+          .create(recursive: true)
+          .then((value) => filepath2 = value.path);
       debugPrint('Audio path $filepath');
       debugPrint('Image path $filepath2');
-      if (has_320 == "true") {
-        kUrl = rawkUrl.replaceAll("_96.mp4", "_320.mp4");
-        final client = http.Client();
-        final request = http.Request('HEAD', Uri.parse(kUrl))..followRedirects = false;
-        final response = await client.send(request);
-        debugPrint(response.statusCode.toString());
-        kUrl = (response.headers['location']);
-        debugPrint(rawkUrl);
-        debugPrint(kUrl);
-        final request2 = http.Request('HEAD', Uri.parse(kUrl))..followRedirects = false;
-        final response2 = await client.send(request2);
-        if (response2.statusCode != 200) {
-          kUrl = kUrl.replaceAll(".mp4", ".mp3");
-        }
-      }
-      var request = await HttpClient().getUrl(Uri.parse(kUrl));
+      var request = await HttpClient().getUrl(Uri.parse(current.url));
       var response = await request.close();
       var bytes = await consolidateHttpClientResponseBytes(response);
       File file = File(filepath);
 
-      var request2 = await HttpClient().getUrl(Uri.parse(image));
+      var request2 = await HttpClient().getUrl(Uri.parse(current.coverart));
       var response2 = await request2.close();
       var bytes2 = await consolidateHttpClientResponseBytes(response2);
       File file2 = File(filepath2);
@@ -168,11 +151,11 @@ class AppState extends State<Musify> {
       debugPrint("Started tag editing");
 
       final tag = Tag(
-        title: title,
-        artist: artist,
+        title: current.title,
+        artist: current.artist,
         artwork: filepath2,
-        album: album,
-        lyrics: lyrics,
+        album: current.album,
+        lyrics: current.lyrics,
         genre: null,
       );
 
@@ -190,7 +173,13 @@ class AppState extends State<Musify> {
       }
       debugPrint("Done");
       Fluttertoast.showToast(
-          msg: "Download Complete!", toastLength: Toast.LENGTH_SHORT, gravity: ToastGravity.BOTTOM, timeInSecForIosWeb: 1, backgroundColor: Colors.black, textColor: Color(0xff61e88a), fontSize: 14.0);
+          msg: "Download Complete!",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
+          timeInSecForIosWeb: 1,
+          backgroundColor: Colors.black,
+          textColor: Color(0xff61e88a),
+          fontSize: 14.0);
     } else if (status.isDenied || status.isPermanentlyDenied) {
       Fluttertoast.showToast(
           msg: "Storage Permission Denied!\nCan't Download Songs",
@@ -230,17 +219,21 @@ class AppState extends State<Musify> {
         resizeToAvoidBottomPadding: false,
         backgroundColor: Colors.transparent,
         //backgroundColor: Color(0xff384850),
-        bottomNavigationBar: kUrl != ""
+        bottomNavigationBar: current != null
             ? Container(
                 height: 75,
                 //color: Color(0xff1c252a),
-                decoration: BoxDecoration(borderRadius: BorderRadius.only(topLeft: Radius.circular(18), topRight: Radius.circular(18)), color: Color(0xff1c252a)),
+                decoration: BoxDecoration(
+                    borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(18),
+                        topRight: Radius.circular(18)),
+                    color: Color(0xff1c252a)),
                 child: Padding(
                   padding: const EdgeInsets.only(top: 5.0, bottom: 2),
                   child: GestureDetector(
                     onTap: () {
                       checker = "Nahi";
-                      if (kUrl != "") {
+                      if (current != null) {
                         Navigator.push(
                           context,
                           MaterialPageRoute(builder: (context) => AudioApp()),
@@ -263,12 +256,13 @@ class AppState extends State<Musify> {
                           ),
                         ),
                         Padding(
-                          padding: const EdgeInsets.only(left: 0.0, top: 7, bottom: 7, right: 15),
+                          padding: const EdgeInsets.only(
+                              left: 0.0, top: 7, bottom: 7, right: 15),
                           //child: Image.network("https://sgdccdnems06.cdnsrv.jio.com/c.saavncdn.com/830/Music-To-Be-Murdered-By-English-2020-20200117040807-500x500.jpg"),
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(8.0),
                             child: CachedNetworkImage(
-                              imageUrl: image,
+                              imageUrl: current.coverart,
                               fit: BoxFit.fill,
                             ),
                           ),
@@ -280,19 +274,25 @@ class AppState extends State<Musify> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: <Widget>[
                               Text(
-                                title,
-                                style: TextStyle(color: accent, fontSize: 17, fontWeight: FontWeight.w600),
+                                current.title,
+                                style: TextStyle(
+                                    color: accent,
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.w600),
                               ),
                               Text(
-                                artist,
-                                style: TextStyle(color: accentLight, fontSize: 15),
+                                current.artist,
+                                style:
+                                    TextStyle(color: accentLight, fontSize: 15),
                               )
                             ],
                           ),
                         ),
                         Spacer(),
                         IconButton(
-                          icon: playerState == PlayerState.playing ? Icon(MdiIcons.pause) : Icon(MdiIcons.playOutline),
+                          icon: playerState == PlayerState.playing
+                              ? Icon(MdiIcons.pause)
+                              : Icon(MdiIcons.playOutline),
                           color: accent,
                           splashColor: Colors.transparent,
                           onPressed: () {
@@ -300,11 +300,19 @@ class AppState extends State<Musify> {
                               if (playerState == PlayerState.playing) {
                                 audioPlayer.pause();
                                 playerState = PlayerState.paused;
-                                MediaNotification.showNotification(title: title, author: artist, artUri: image, isPlaying: false);
+                                MediaNotification.showNotification(
+                                    title: current.title,
+                                    author: current.artist,
+                                    artUri: current.coverart,
+                                    isPlaying: false);
                               } else if (playerState == PlayerState.paused) {
-                                audioPlayer.play(kUrl);
+                                audioPlayer.play(current.url);
                                 playerState = PlayerState.playing;
-                                MediaNotification.showNotification(title: title, author: artist, artUri: image, isPlaying: true);
+                                MediaNotification.showNotification(
+                                    title: current.title,
+                                    author: current.artist,
+                                    artUri: current.coverart,
+                                    isPlaying: true);
                               }
                             });
                           },
@@ -328,7 +336,7 @@ class AppState extends State<Musify> {
                       padding: const EdgeInsets.only(left: 42.0),
                       child: Center(
                         child: GradientText(
-                          "Musify.",
+                          "Epidemic Sound",
                           shaderRect: Rect.fromLTWH(13.0, 0.0, 100.0, 50.0),
                           gradient: LinearGradient(colors: [
                             Color(0xff4db6ac),
@@ -395,7 +403,8 @@ class AppState extends State<Musify> {
                             width: 18,
                             child: Center(
                               child: CircularProgressIndicator(
-                                valueColor: AlwaysStoppedAnimation<Color>(accent),
+                                valueColor:
+                                    AlwaysStoppedAnimation<Color>(accent),
                               ),
                             ),
                           )
@@ -438,10 +447,10 @@ class AppState extends State<Musify> {
                             child: InkWell(
                               borderRadius: BorderRadius.circular(10.0),
                               onTap: () {
-                                getSongDetails(searchedList[index]["id"], context);
+                                getSongDetails(searchedList[index], context);
                               },
                               onLongPress: () {
-                                topSongs();
+                                soundryCatalog();
                               },
                               splashColor: accent,
                               hoverColor: accent,
@@ -459,17 +468,17 @@ class AppState extends State<Musify> {
                                       ),
                                     ),
                                     title: Text(
-                                      (searchedList[index]['title']).toString().split("(")[0].replaceAll("&quot;", "\"").replaceAll("&amp;", "&"),
+                                      searchedList[index].title,
                                       style: TextStyle(color: Colors.white),
                                     ),
                                     subtitle: Text(
-                                      searchedList[index]['more_info']["singers"],
+                                      searchedList[index].artist,
                                       style: TextStyle(color: Colors.white),
                                     ),
                                     trailing: IconButton(
                                       color: accent,
                                       icon: Icon(MdiIcons.downloadOutline),
-                                      onPressed: () => downloadSong(searchedList[index]["id"]),
+                                      onPressed: () => downloadSong(),
                                     ),
                                   ),
                                 ],
@@ -479,18 +488,20 @@ class AppState extends State<Musify> {
                         );
                       },
                     )
-                  : FutureBuilder(
-                      future: topSongs(),
+                  : FutureBuilder<List<Song>>(
+                      future: soundryCatalog(),
                       builder: (context, data) {
+                        print(data);
                         if (data.hasData)
                           return Container(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: <Widget>[
                                 Padding(
-                                  padding: const EdgeInsets.only(top: 30.0, bottom: 10, left: 8),
+                                  padding: const EdgeInsets.only(
+                                      top: 30.0, bottom: 10, left: 8),
                                   child: Text(
-                                    "Top 15 Songs",
+                                    "${data.data.length} Songs",
                                     textAlign: TextAlign.left,
                                     style: TextStyle(
                                       fontSize: 22,
@@ -501,13 +512,12 @@ class AppState extends State<Musify> {
                                 ),
                                 Container(
                                   //padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
-                                  height: MediaQuery.of(context).size.height * 0.22,
+                                  height: MediaQuery.of(context).size.height,
                                   child: ListView.builder(
-                                    scrollDirection: Axis.horizontal,
-                                    itemCount: 15,
+                                    scrollDirection: Axis.vertical,
+                                    itemCount: data.data.length,
                                     itemBuilder: (context, index) {
-                                      return getTopSong(
-                                          data.data[index]["image"], data.data[index]["title"], data.data[index]["more_info"]["artistMap"]["primary_artists"][0]["name"], data.data[index]["id"]);
+                                      return getTopSong(data.data[index]);
                                     },
                                   ),
                                 ),
@@ -518,7 +528,8 @@ class AppState extends State<Musify> {
                             child: Padding(
                           padding: const EdgeInsets.all(35.0),
                           child: CircularProgressIndicator(
-                            valueColor: new AlwaysStoppedAnimation<Color>(accent),
+                            valueColor:
+                                new AlwaysStoppedAnimation<Color>(accent),
                           ),
                         ));
                       },
@@ -530,10 +541,10 @@ class AppState extends State<Musify> {
     );
   }
 
-  Widget getTopSong(String image, String title, String subtitle, String id) {
+  Widget getTopSong(Song song) {
     return InkWell(
       onTap: () {
-        getSongDetails(id, context);
+        getSongDetails(song, context);
       },
       child: Column(
         children: [
@@ -550,28 +561,22 @@ class AppState extends State<Musify> {
                   borderRadius: BorderRadius.circular(10.0),
                   image: DecorationImage(
                     fit: BoxFit.fill,
-                    image: CachedNetworkImageProvider(image),
+                    image: CachedNetworkImageProvider(song.coverart),
                   ),
                 ),
               ),
             ),
           ),
-          SizedBox(
-            height: 2,
-          ),
           Text(
-            title.split("(")[0].replaceAll("&amp;", "&").replaceAll("&#039;", "'").replaceAll("&quot;", "\""),
+            song.title,
             style: TextStyle(
               color: Colors.white,
               fontSize: 14.0,
               fontWeight: FontWeight.bold,
             ),
           ),
-          SizedBox(
-            height: 2,
-          ),
           Text(
-            subtitle,
+            song.artist,
             style: TextStyle(
               color: Colors.white38,
               fontSize: 12.0,

@@ -98,8 +98,8 @@ class AudioAppState extends State<AudioApp> {
   }
 
   Future play() async {
-    await audioPlayer.play(kUrl);
-    MediaNotification.showNotification(title: title, author: artist, artUri: image, isPlaying: true);
+    await audioPlayer.play(current.url);
+    MediaNotification.showNotification(title: current.title, author: current.artist, artUri: current.coverart, isPlaying: true);
     if (mounted)
       setState(() {
         playerState = PlayerState.playing;
@@ -108,7 +108,7 @@ class AudioAppState extends State<AudioApp> {
 
   Future pause() async {
     await audioPlayer.pause();
-    MediaNotification.showNotification(title: title, author: artist, artUri: image, isPlaying: false);
+    MediaNotification.showNotification(title: current.title, author: current.artist, artUri: current.coverart, isPlaying: false);
     setState(() {
       playerState = PlayerState.paused;
     });
@@ -198,7 +198,7 @@ class AudioAppState extends State<AudioApp> {
                     shape: BoxShape.rectangle,
                     image: DecorationImage(
                       fit: BoxFit.fill,
-                      image: CachedNetworkImageProvider(image),
+                      image: CachedNetworkImageProvider(current.coverart),
                     ),
                   ),
                 ),
@@ -207,7 +207,7 @@ class AudioAppState extends State<AudioApp> {
                   child: Column(
                     children: <Widget>[
                       GradientText(
-                        title,
+                        current.title,
                         shaderRect: Rect.fromLTWH(13.0, 0.0, 100.0, 50.0),
                         gradient: LinearGradient(colors: [
                           Color(0xff4db6ac),
@@ -220,7 +220,7 @@ class AudioAppState extends State<AudioApp> {
                       Padding(
                         padding: const EdgeInsets.only(top: 8.0),
                         child: Text(
-                          album + "  |  " + artist,
+                          current.album + "  |  " + current.artist,
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             color: accentLight,
@@ -353,7 +353,7 @@ class AudioAppState extends State<AudioApp> {
                                               ],
                                             ),
                                           ),
-                                          lyrics != "null"
+                                          current.lyrics != null
                                               ? Expanded(
                                                   flex: 1,
                                                   child: Padding(
@@ -361,7 +361,7 @@ class AudioAppState extends State<AudioApp> {
                                                       child: Center(
                                                         child: SingleChildScrollView(
                                                           child: Text(
-                                                            lyrics,
+                                                            current.lyrics,
                                                             style: TextStyle(
                                                               fontSize: 16.0,
                                                               color: accentLight,

@@ -1,3 +1,4 @@
+import 'package:Musify/my_native_view.dart';
 import 'package:flutter/material.dart';
 import 'package:gradient_widgets/gradient_widgets.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
@@ -59,6 +60,7 @@ class AboutCards extends StatelessWidget {
     return Material(
       child: Column(
         children: <Widget>[
+          Container(height: 1000, child: MyNativeView()),
           Padding(
             padding:
                 const EdgeInsets.only(top: 20, left: 8, right: 8, bottom: 6),
@@ -113,7 +115,7 @@ class AboutCards extends StatelessWidget {
                   ),
                 ),
                 title: Text(
-                  'Harsh V23',
+                  'Rasmus Franke',
                   style: TextStyle(color: accentLight),
                 ),
                 subtitle: Text(
